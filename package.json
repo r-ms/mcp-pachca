@@ -1,0 +1,32 @@
+{
+  "name": "mcp-pachca",
+  "version": "0.1.0",
+  "description": "MCP server for Pachca corporate messenger",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "mcp-pachca": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["mcp", "pachca", "messenger", "model-context-protocol"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/r-ms/mcp-pachca.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

@@ -13,7 +13,7 @@ export function createServer(session: Session): Server {
   const client = new PachcaClient(session);
 
   const server = new Server(
-    { name: "mcp-pachca", version: "0.1.0" },
+    { name: "mcp-pachca", version: "0.3.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -34,7 +34,7 @@ export function createServer(session: Session): Server {
 
     try {
       const result = await handler(client, (args ?? {}) as Record<string, unknown>);
-      const text = JSON.stringify(result, null, 2);
+      const text = JSON.stringify(result, null, 2) ?? "null";
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
       logger.error("Tool call failed", { tool: name, error: String(err) });

@@ -24,7 +24,7 @@ async function handleSearchUsers(
     type: "user",
     query: String(args["query"]),
   };
-  if (args["cursor"]) params["cursor"] = String(args["cursor"]);
+  if (args["cursor"] !== undefined) params["cursor"] = String(args["cursor"]);
   return client.get<PachcaSearchResult<PachcaUser>>("/search", params);
 }
 
@@ -44,12 +44,13 @@ async function handleListChats(
   client: PachcaClient,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const folders = await client.get<PachcaFolder[]>("/menu/folders");
+  const res = await client.get<{ data: PachcaFolder[] }>("/menu/folders");
+  const folders = res?.data ?? [];
 
   const folderKind = args["folder"] as string | undefined;
   if (!folderKind) {
     return {
-      folders: folders?.map((f) => ({
+      folders: folders.map((f) => ({
         id: f.id,
         title: f.title,
         kind: f.kind,
@@ -57,16 +58,13 @@ async function handleListChats(
     };
   }
 
-  const folder = folders?.find((f) => f.kind === folderKind);
+  const folder = folders.find((f) => f.kind === folderKind);
   if (!folder) {
-    return {
-      error: `Folder "${folderKind}" not found`,
-      available: folders?.map((f) => f.kind),
-    };
+    throw new Error(`Folder "${folderKind}" not found. Available: ${folders.map((f) => f.kind).join(", ")}`);
   }
 
   const params: Record<string, string> = {};
-  if (args["cursor"]) params["cursor"] = String(args["cursor"]);
+  if (args["cursor"] !== undefined) params["cursor"] = String(args["cursor"]);
 
   return client.get<{ records: PachcaChat[]; paginate: PachcaPaginate }>(
     `/menu/folders/${folder.id}/chats`,
@@ -90,14 +88,15 @@ async function handleGetChatMembers(
   client: PachcaClient,
   args: Record<string, unknown>,
 ): Promise<unknown> {
+  const chatId = Number(args["id"]);
   const params: Record<string, string> = {};
-  if (args["limit"]) params["limit"] = String(args["limit"]);
-  if (args["cursor"]) params["cursor"] = String(args["cursor"]);
+  if (args["limit"] !== undefined) params["limit"] = String(args["limit"]);
+  if (args["cursor"] !== undefined) params["cursor"] = String(args["cursor"]);
   return client.get<{
     users: PachcaUser[];
     total_users: number;
     paginate: PachcaPaginate;
-  }>(`/chats/${args["id"]}/users`, params);
+  }>(`/chats/${chatId}/users`, params);
 }
 
 async function handleListMessages(
@@ -107,9 +106,14 @@ async function handleListMessages(
   const params: Record<string, string> = {
     chat_id: String(args["chat_id"]),
   };
-  if (args["per"]) params["per"] = String(args["per"]);
-  if (args["message_id"]) params["message_id"] = String(args["message_id"]);
-  if (args["direction"]) params["direction"] = String(args["direction"]);
+  if (args["per"] !== undefined) params["per"] = String(args["per"]);
+  if (args["message_id"] !== undefined) params["message_id"] = String(args["message_id"]);
+  if (args["direction"] !== undefined) {
+    if (args["message_id"] === undefined) {
+      throw new Error("direction requires message_id to be set");
+    }
+    params["direction"] = String(args["direction"]);
+  }
   return client.get<PachcaMessage[]>("/messages", params);
 }
 
@@ -128,16 +132,23 @@ async function handleSendMessage(
   client: PachcaClient,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const body: Record<string, unknown> = {
-    chat_id: Number(args["chat_id"]),
-    text: String(args["text"]),
+  const message: Record<string, unknown> = {
     uuid: randomUUID(),
+    content: String(args["text"]),
+    markup: [],
+    kind: 0,
+    files: [],
+    skip_invite_mentions: false,
   };
-  if (args["parent_message_id"]) {
-    body["parent_message_id"] = Number(args["parent_message_id"]);
+  if (args["parent_message_id"] !== undefined) {
+    message["parent_message_id"] = Number(args["parent_message_id"]);
   }
+  const body = {
+    chat_id: Number(args["chat_id"]),
+    message,
+  };
   const result = await client.post<PachcaMessage>("/messages", body);
-  return result ?? { success: true };
+  return result ?? { success: true, uuid: message.uuid, chat_id: body.chat_id };
 }
 
 async function handleSearch(
@@ -148,7 +159,7 @@ async function handleSearch(
     type: "message",
     query: String(args["query"]),
   };
-  if (args["cursor"]) params["cursor"] = String(args["cursor"]);
+  if (args["cursor"] !== undefined) params["cursor"] = String(args["cursor"]);
   return client.get<PachcaSearchResult<PachcaMessage>>("/search", params);
 }
 
@@ -164,7 +175,11 @@ async function handleGetPresence(
   client: PachcaClient,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const ids = args["ids"] as number[];
+  const rawIds = args["ids"];
+  if (!Array.isArray(rawIds) || rawIds.length === 0) {
+    throw new Error("ids must be a non-empty array of numbers");
+  }
+  const ids = rawIds.map((id) => Number(id));
   return client.getWithArrayParams<PachcaPresence[]>("/friends/presence", {
     ids,
   });

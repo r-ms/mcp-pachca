@@ -7,7 +7,7 @@ import { logger } from "./logger.js";
 import { runSetup } from "./setup.js";
 
 async function main(): Promise<void> {
-  if (process.argv.includes("--setup")) {
+  if (process.argv[2] === "--setup") {
     await runSetup();
     process.exit(0);
   }
@@ -27,8 +27,18 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  process.on("SIGINT", () => void shutdown("SIGINT"));
-  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () =>
+    shutdown("SIGINT").catch((err) => {
+      logger.error("Error during shutdown", { error: String(err) });
+      process.exit(1);
+    }),
+  );
+  process.on("SIGTERM", () =>
+    shutdown("SIGTERM").catch((err) => {
+      logger.error("Error during shutdown", { error: String(err) });
+      process.exit(1);
+    }),
+  );
 
   await server.connect(transport);
   logger.info("MCP Pachca server started");

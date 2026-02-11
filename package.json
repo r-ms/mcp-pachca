@@ -1,6 +1,6 @@
 {
   "name": "mcp-pachca",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "MCP server for Pachca corporate messenger",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,7 +16,12 @@
   "engines": {
     "node": ">=18"
   },
-  "keywords": ["mcp", "pachca", "messenger", "model-context-protocol"],
+  "keywords": [
+    "mcp",
+    "pachca",
+    "messenger",
+    "model-context-protocol"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

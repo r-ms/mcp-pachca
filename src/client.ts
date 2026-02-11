@@ -60,6 +60,7 @@ export class PachcaClient {
       const headers: Record<string, string> = {
         Authorization: `Bearer ${this.session.workspaceJwt}`,
         Accept: "application/json",
+        "user-id": String(this.session.profileId),
       };
 
       if (this.session.cookies.length > 0) {
@@ -82,15 +83,17 @@ export class PachcaClient {
       }
 
       if (response.status === 401) {
+        await response.text();
         throw new Error("Session expired. Run: npx mcp-pachca --setup");
       }
 
       if (!response.ok) {
+        const rawBody = await response.text();
         let errorBody: unknown;
         try {
-          errorBody = await response.json();
+          errorBody = JSON.parse(rawBody);
         } catch {
-          errorBody = await response.text();
+          errorBody = rawBody;
         }
         logger.error("Pachca API error", {
           status: response.status,
@@ -101,7 +104,19 @@ export class PachcaClient {
         );
       }
 
-      return (await response.json()) as T;
+      const rawText = await response.text();
+      let data: T;
+      try {
+        data = JSON.parse(rawText) as T;
+      } catch {
+        throw new Error(
+          `Pachca API returned non-JSON response (HTTP ${response.status}): ${rawText.slice(0, 200)}`,
+        );
+      }
+      if (process.env["DEBUG"]) {
+        logger.debug("Pachca API response", { method, url, body: data });
+      }
+      return data;
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         logger.error("Pachca API request timeout", { url });

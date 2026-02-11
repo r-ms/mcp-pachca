@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { logger } from "./logger.js";
 
 export interface Session {
   email: string;
@@ -22,16 +23,31 @@ export function loadSession(): Session | null {
   const p = getSessionPath();
   try {
     const raw = fs.readFileSync(p, "utf8");
-    return JSON.parse(raw) as Session;
-  } catch {
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    if (
+      typeof data.email !== "string" ||
+      typeof data.jwt !== "string" ||
+      typeof data.workspaceJwt !== "string" ||
+      typeof data.profileId !== "number" ||
+      typeof data.companyId !== "number" ||
+      !Array.isArray(data.cookies) ||
+      !data.cookies.every((c: unknown) => typeof c === "string")
+    ) {
+      return null;
+    }
+    return data as unknown as Session;
+  } catch (err: unknown) {
+    if (err instanceof Error && (!("code" in err) || (err as NodeJS.ErrnoException).code !== "ENOENT")) {
+      logger.error("Failed to load session", { error: String(err) });
+    }
     return null;
   }
 }
 
 export function saveSession(session: Session): void {
   const p = getSessionPath();
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(session, null, 2) + "\n", "utf8");
+  fs.mkdirSync(path.dirname(p), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(p, JSON.stringify(session, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
 }
 
 export async function requestOTP(email: string): Promise<void> {
@@ -79,25 +95,33 @@ export async function performLogin(
     );
   }
 
-  const wsData = (await wsRes.json()) as Array<{
-    id: number;
-    jwt: string;
-    company_id: number;
-    profile_id: number;
-  }>;
+  // Response shape: { data: [{ workspaces: [{ actual_profile: { id, jwt, company_id, ... } }] }] }
+  const wsBody = (await wsRes.json()) as {
+    data: Array<{
+      workspaces: Array<{
+        actual_profile: {
+          id: number;
+          jwt: string;
+          company_id: number;
+        };
+      }>;
+    }>;
+  };
 
-  if (wsData.length === 0) {
-    throw new Error("No workspaces found for this account");
+  const account = wsBody.data?.[0];
+  const workspace = account?.workspaces?.[0];
+  const profile = workspace?.actual_profile;
+
+  if (!profile?.jwt) {
+    throw new Error("No workspace found for this account");
   }
-
-  const ws = wsData[0]!;
 
   return {
     email,
     jwt,
-    workspaceJwt: ws.jwt,
-    profileId: ws.profile_id,
-    companyId: ws.company_id,
+    workspaceJwt: profile.jwt,
+    profileId: profile.id,
+    companyId: profile.company_id,
     cookies,
     createdAt: new Date().toISOString(),
   };

@@ -1,81 +1,77 @@
 export interface PachcaUser {
   id: number;
-  first_name: string;
+  name: string;
+  display_name: string;
   last_name: string;
-  nickname: string;
   email: string;
-  phone_number: string | null;
+  avatar_color: string;
+  company_role: string | null;
   department: string | null;
   title: string | null;
-  role: "admin" | "user" | "multi_guest";
+  role: string;
   suspended: boolean;
-  invite_status: "confirmed" | "sent";
-  list_tags: string[];
-  custom_properties: PachcaCustomProperty[];
-  user_status: PachcaUserStatus | null;
   bot: boolean;
-  sso: boolean;
-  created_at: string;
-  last_activity_at: string | null;
+  last_seen: string | null;
   time_zone: string;
   image_url: string | null;
-}
-
-export interface PachcaCustomProperty {
-  id: number;
-  name: string;
-  data_type: string;
-  value: string;
-}
-
-export interface PachcaUserStatus {
-  emoji: string;
-  title: string;
-  expires_at: string | null;
 }
 
 export interface PachcaChat {
   id: number;
   name: string;
-  owner_id: number;
-  created_at: string;
-  member_ids: number[];
-  group_tag_ids: number[];
+  token: string;
+  chat_subtype: string | null;
   channel: boolean;
   personal: boolean;
   public: boolean;
+  is_member: boolean;
+  personal_interlocutor: number | null;
+  avatar_color: string | null;
+  avatar_url: string | null;
+  workspace_id: number;
   last_message_at: string | null;
+  created_at: string;
   meet_room_url: string | null;
 }
 
 export interface PachcaMessage {
   id: number;
-  entity_type: "discussion" | "thread" | "user";
-  entity_id: number;
-  chat_id: number;
-  content: string;
+  uuid: string;
+  text: string;
+  markup: string | null;
+  kind: string;
   user_id: number;
+  chat_id: number;
   created_at: string;
-  url: string;
-  files: PachcaFile[];
-  thread: PachcaThreadRef | null;
+  updated_at: string | null;
+  pinned: boolean;
+  important: boolean;
+  thread_id: number | null;
+  thread_message_count: number;
   parent_message_id: number | null;
+  reactions: PachcaReaction[];
+  files: PachcaFile[];
+  link_previews: PachcaLinkPreview[];
+}
+
+export interface PachcaReaction {
+  code: string;
+  user_ids: number[];
 }
 
 export interface PachcaFile {
   id: number;
   key: string;
   name: string;
-  file_type: "file" | "image";
+  file_type: string;
   url: string;
 }
 
-export interface PachcaThreadRef {
-  id: number;
-  chat_id: number;
-  message_id: number;
-  message_chat_id: number;
-  updated_at: string;
+export interface PachcaLinkPreview {
+  url: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
 }
 
 export interface PachcaThread {
@@ -86,21 +82,46 @@ export interface PachcaThread {
   updated_at: string;
 }
 
-export interface PachcaTag {
+export interface PachcaFolder {
+  id: number;
+  title: string;
+  kind: "pinned" | "team" | "personal";
+}
+
+export interface PachcaPaginate {
+  cursor: string | null;
+  has_next: boolean;
+}
+
+export interface PachcaSearchResult<T> {
+  records: T[];
+  paginate: PachcaPaginate;
+}
+
+export interface PachcaPresence {
+  id: number;
+  status: "online" | "offline";
+}
+
+export interface PachcaReadInfo {
+  id: number;
+  unread_message_counter: number;
+  unread: boolean;
+  mentioned: boolean;
+  last_read_message_id: number | null;
+  last_message_id: number | null;
+}
+
+export interface PachcaProfile {
   id: number;
   name: string;
-  users_count: number;
-}
-
-export interface CursorPaginatedResponse<T> {
-  meta: { paginate: { next_page: string | null } };
-  data: T[];
-}
-
-export interface PagePaginatedResponse<T> {
-  data: T[];
-}
-
-export interface SingleResponse<T> {
-  data: T;
+  display_name: string;
+  last_name: string;
+  email: string;
+  avatar_color: string;
+  company_role: string | null;
+  department: string | null;
+  title: string | null;
+  time_zone: string;
+  image_url: string | null;
 }

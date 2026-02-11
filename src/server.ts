@@ -3,13 +3,14 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { Session } from "./auth.js";
 import { PachcaClient } from "./client.js";
 import { toolDefinitions } from "./tools/schemas.js";
 import { handlerRegistry } from "./tools/handlers.js";
 import { logger } from "./logger.js";
 
-export function createServer(token: string): Server {
-  const client = new PachcaClient(token);
+export function createServer(session: Session): Server {
+  const client = new PachcaClient(session);
 
   const server = new Server(
     { name: "mcp-pachca", version: "0.1.0" },

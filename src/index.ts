@@ -2,16 +2,23 @@
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "./server.js";
+import { loadSession } from "./auth.js";
 import { logger } from "./logger.js";
+import { runSetup } from "./setup.js";
 
 async function main(): Promise<void> {
-  const token = process.env["PACHCA_ACCESS_TOKEN"];
-  if (!token) {
-    logger.error("PACHCA_ACCESS_TOKEN environment variable is required");
+  if (process.argv.includes("--setup")) {
+    await runSetup();
+    process.exit(0);
+  }
+
+  const session = loadSession();
+  if (!session) {
+    logger.error("No session found. Run: npx mcp-pachca --setup");
     process.exit(1);
   }
 
-  const server = createServer(token);
+  const server = createServer(session);
   const transport = new StdioServerTransport();
 
   const shutdown = async (signal: string): Promise<void> => {

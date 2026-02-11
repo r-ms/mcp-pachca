@@ -1,11 +1,12 @@
 import { logger } from "./logger.js";
+import type { Session } from "./auth.js";
 
 export class PachcaClient {
-  private readonly baseUrl = "https://api.pachca.com/api/shared/v1";
-  private readonly token: string;
+  private readonly baseUrl = "https://app.pachca.com/api/v3";
+  private readonly session: Session;
 
-  constructor(token: string) {
-    this.token = token;
+  constructor(session: Session) {
+    this.session = session;
   }
 
   async get<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -17,10 +18,31 @@ export class PachcaClient {
         }
       }
     }
-    return this.request<T>("GET", url.toString());
+    return (await this.request<T>("GET", url.toString())) as T;
   }
 
-  async post<T>(path: string, body: unknown): Promise<T> {
+  async getWithArrayParams<T>(
+    path: string,
+    arrayParams: Record<string, (string | number)[]>,
+    params?: Record<string, string>,
+  ): Promise<T> {
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== "") {
+          url.searchParams.set(key, value);
+        }
+      }
+    }
+    for (const [key, values] of Object.entries(arrayParams)) {
+      for (const v of values) {
+        url.searchParams.append(`${key}[]`, String(v));
+      }
+    }
+    return (await this.request<T>("GET", url.toString())) as T;
+  }
+
+  async post<T>(path: string, body: unknown): Promise<T | undefined> {
     return this.request<T>("POST", `${this.baseUrl}${path}`, body);
   }
 
@@ -28,7 +50,7 @@ export class PachcaClient {
     method: string,
     url: string,
     body?: unknown,
-  ): Promise<T> {
+  ): Promise<T | undefined> {
     logger.debug("Pachca API request", { method, url });
 
     const controller = new AbortController();
@@ -36,9 +58,13 @@ export class PachcaClient {
 
     try {
       const headers: Record<string, string> = {
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${this.session.workspaceJwt}`,
         Accept: "application/json",
       };
+
+      if (this.session.cookies.length > 0) {
+        headers["Cookie"] = this.session.cookies.join("; ");
+      }
 
       if (body !== undefined) {
         headers["Content-Type"] = "application/json; charset=utf-8";
@@ -50,6 +76,14 @@ export class PachcaClient {
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
+
+      if (response.status === 204) {
+        return undefined;
+      }
+
+      if (response.status === 401) {
+        throw new Error("Session expired. Run: npx mcp-pachca --setup");
+      }
 
       if (!response.ok) {
         let errorBody: unknown;

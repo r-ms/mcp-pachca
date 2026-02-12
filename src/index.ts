@@ -13,11 +13,6 @@ async function main(): Promise<void> {
   }
 
   const session = loadSession();
-  if (!session) {
-    logger.error("No session found. Run: npx mcp-pachca --setup");
-    process.exit(1);
-  }
-
   const server = createServer(session);
   const transport = new StdioServerTransport();
 

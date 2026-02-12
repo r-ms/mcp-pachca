@@ -9,11 +9,11 @@ import { toolDefinitions } from "./tools/schemas.js";
 import { handlerRegistry } from "./tools/handlers.js";
 import { logger } from "./logger.js";
 
-export function createServer(session: Session): Server {
-  const client = new PachcaClient(session);
+export function createServer(session: Session | null): Server {
+  const client = session ? new PachcaClient(session) : null;
 
   const server = new Server(
-    { name: "mcp-pachca", version: "0.3.0" },
+    { name: "mcp-pachca", version: "0.4.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -22,6 +22,18 @@ export function createServer(session: Session): Server {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    if (!client) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "No active session. Run: npx mcp-pachca --setup",
+          },
+        ],
+        isError: true,
+      };
+    }
+
     const { name, arguments: args } = request.params;
     const handler = handlerRegistry[name];
 

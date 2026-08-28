@@ -28,6 +28,8 @@ export const logger: Logger = {
     process.stderr.write(formatLog("error", message, data) + "\n");
   },
   debug(message, data) {
-    process.stderr.write(formatLog("debug", message, data) + "\n");
+    if (!process.env["MCP_PACHCA_QUIET"]) {
+      process.stderr.write(formatLog("debug", message, data) + "\n");
+    }
   },
 };

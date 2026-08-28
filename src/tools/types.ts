@@ -32,6 +32,7 @@ export interface PachcaChat {
   last_message_at: string | null;
   created_at: string;
   meet_room_url: string | null;
+  messages_count: number;
 }
 
 export interface PachcaMessage {

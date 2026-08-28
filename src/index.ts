@@ -12,6 +12,24 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
+  if (process.argv[2] === "--dump") {
+    process.env["MCP_PACHCA_QUIET"] = "1";
+    const { runDump } = await import("./dump.js");
+    await runDump(process.argv[3]);
+    process.exit(0);
+  }
+
+  if (process.argv[2] === "--convert") {
+    if (!process.argv[3]) {
+      process.stderr.write("Usage: mcp-pachca --convert <dump_directory>\n");
+      process.stderr.write("Example: mcp-pachca --convert ./pachca_dump_20260324\n");
+      process.exit(1);
+    }
+    const { runConvert } = await import("./convert.js");
+    runConvert(process.argv[3]);
+    process.exit(0);
+  }
+
   const session = loadSession();
   const server = createServer(session);
   const transport = new StdioServerTransport();
